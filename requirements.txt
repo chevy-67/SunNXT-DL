@@ -1,0 +1,10 @@
+certifi==2026.5.20
+charset-normalizer==3.4.7
+construct==2.10.70
+idna==3.17
+protobuf==3.20.0
+pycryptodome==3.23.0
+pycryptodomex==3.23.0
+requests==2.34.2
+tqdm==4.67.3
+urllib3==2.7.0
