@@ -8,6 +8,7 @@ video_enc = './temp/vid_enc.mp4'
 audio_enc = './temp/aud_enc.m4a'
 audio_dec = './temp/aud_dec.m4a'
 video_dec = './temp/vid_dec.mp4'
+output_video = './output/final.mkv'
 cookies_file = "./cookies/cookies.txt"
 mp4decrypt = "./binaries/mp4decrypt"
 mp4dump = "./binaries/mp4dump"
@@ -110,12 +111,13 @@ lic_header = {
     "sec-ch-ua-platform": "Linux"
 }
 
-licurl = 'https://pwaapi.sunnxt.com/licenseproxy/v3/modularLicense/?content_id=250710'
+content_id = MPD.split('?')[0].split('/')[-1].split('_')[0]
+licurl = f'https://pwaapi.sunnxt.com/licenseproxy/v3/modularLicense/?content_id={content_id}'
 
 def do_decrypt(pssh, licurl):
     wvdecrypt = WvDecrypt(pssh)
     chal = wvdecrypt.get_challenge()
-    resp = requests.post(url=licurl, data=chal, headers=lic_header, cookies=cookies)
+    resp = requests.post(url=licurl, data=chal, headers=lic_header)
     license_decoded = resp.content
     license_b64 = base64.b64encode(license_decoded)
     wvdecrypt.update_license(license_b64)
@@ -134,41 +136,13 @@ KEYS = do_decrypt(licurl=licurl, pssh=pssh)
 
 print(keysOnly(KEYS))
 
-def proper(keys):
-    commandline = [mp4decrypt]
-    for key in keys:
-        if key.type == 'CONTENT':
-            commandline.append('--key')
-            commandline.append('{}:{}'.format(key.kid.hex(), key.key.hex()))
-
-    return commandline
-
-def decrypt(keys_, inputt, output):
-    Commmand = proper(keys_)
-    Commmand.append(inputt)
-    Commmand.append(output)
-
-    wvdecrypt_process = subprocess.Popen(Commmand)
-    stdoutdata, stderrdata = wvdecrypt_process.communicate()
-    wvdecrypt_process.wait()
-
-    return
-
-def keysOnly(keys):
-    for key in keys:
-        if key.type == 'CONTENT':
-            key = ('{}:{}'.format(key.kid.hex(), key.key.hex()))
-
-    return key
-
-
 print("\nDecrypting video...")
 subprocess.run([mp4decrypt,'--show-progress','--key',keysOnly(KEYS),video_enc,video_dec],capture_output=True,text=True)
 print("\nDecrypting audio...")
 subprocess.run([mp4decrypt,'--show-progress','--key',keysOnly(KEYS),audio_enc,audio_dec],capture_output=True,text=True)
 
 print('\nMerging video and audio...')
-subprocess.run([ffmpeg,'--hide-banner','-y','-i',video_dec,'-i',audio_dec,'-c:v','copy','-c:a','copy','-map','0:v:0?','-map','1:a:0?','final.mkv'])
+subprocess.run([ffmpeg,'-hide_banner','-y','-i',video_dec,'-i',audio_dec,'-c:v','copy','-c:a','copy','-map','0:v','-map','1:a',output_video])
 
 print("\nClearing temp files")
 os.remove(video_dec)
