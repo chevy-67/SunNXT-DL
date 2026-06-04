@@ -165,7 +165,7 @@ print("\nChecking Cache...")
 def save_keys(KEYS):
     with open(keys_cache,'a') as file:
         file.write(title+'\n') 
-        file.write(keysOnly(KEYS)+'\n')
+        file.write(KEYS+'\n')
         file.write('\n')
 
 with open(keys_cache,'r') as file:
