@@ -2,15 +2,13 @@ import subprocess
 import requests,subprocess,os,base64,re,urllib.request
 from pywidevine.decrypt.wvdecrypt import WvDecrypt
 
-video_enc = './temp/vid_enc.mp4'
-audio_enc = './temp/aud_enc.m4a'
-audio_dec = './temp/aud_dec.m4a'
-video_dec = './temp/vid_dec.mp4'
+video_enc = './output/temp/vid_enc.mp4'
+audio_enc = './output/temp/aud_enc.m4a'
+audio_dec = './output/temp/aud_dec.m4a'
+video_dec = './output/temp/vid_dec.mp4'
 cookies_file = "./cookies/cookies.txt"
 mp4decrypt = "./binaries/mp4decrypt"
-mp4dump = "./binaries/mp4dump"
 yt_dlp = './binaries/yt-dlp_linux'
-mkvmerge = './binaries/mkvmerge'
 ffmpeg = './binaries/ffmpeg'
 keys_cache = './KEYS.txt'
 
@@ -69,6 +67,7 @@ def get_title(mpd):
     return title
 
 title = get_title(MPD)
+print(divider)
 print("\nRipping : "+title+"\n")
 print(divider)  
 subprocess.run([yt_dlp,'--allow-unplayable-formats','-F','-q','--no-warnings',MPD], check=True, text=True)
