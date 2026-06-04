@@ -6,24 +6,11 @@ video_enc = './output/temp/vid_enc.mp4'
 audio_enc = './output/temp/aud_enc.m4a'
 audio_dec = './output/temp/aud_dec.m4a'
 video_dec = './output/temp/vid_dec.mp4'
-cookies_file = "./cookies/cookies.txt"
-mp4decrypt = "./binaries/mp4decrypt"
-yt_dlp = './binaries/yt-dlp_linux'
-ffmpeg = './binaries/ffmpeg'
+mp4decrypt = "./binaries/mp4decrypt.exe"
+yt_dlp = './binaries/yt-dlp_x86.exe'
+ffmpeg = './binaries/ffmpeg.exe'
 keys_cache = './KEYS.txt'
 
-def parseCookieFile(cookiefile):
-    cookies = {}
-    with open (cookies_file, 'r') as fp:
-        for line in fp:
-            if not re.match(r'^\#', line):
-                lineFields = line.strip().split('\t')
-                if len(lineFields) < 7:
-                    continue
-                cookies[lineFields[5]] = lineFields[6]
-    return cookies
-    
-cookies = parseCookieFile(cookies_file)
 headers = {'User-Agent': 'Mozilla/5.0'}
 lic_header = {
        "Accept": "*/*",
@@ -119,24 +106,6 @@ def extract_drm_from_mpd(url):
 pssh, kid = extract_drm_from_mpd(MPD)
 print(f"KID    :  {kid}")
 print(f"PSSH   : {pssh}")
-
-lic_header = {
-       "Accept": "*/*",
-    "Accept-Encoding": "gzip, deflate, br, zstd",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Connection": "keep-alive",
-    "Content-Length": "1719",
-    "Host": "pwaapi.sunnxt.com",
-    "Origin": "https://www.sunnxt.com",
-    "Referer": "https://www.sunnxt.com/",
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "same-site",
-    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
-    "sec-ch-ua": "\"Chromium\";v=\"148\", \"Google Chrome\";v=\"148\", \"Not/A)Brand\";v=\"99\"",
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": "Linux"
-}
 
 content_id = mpd_to_id(MPD)
 licurl = f'https://pwaapi.sunnxt.com/licenseproxy/v3/modularLicense/?content_id={content_id}'
