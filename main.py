@@ -167,16 +167,19 @@ def save_keys(KEYS):
         file.write(KEYS+'\n')
         file.write('\n')
 
-with open(keys_cache,'r') as file:
-    for line in file:
-        if kid in line:
-            print("Key found in cache")
-            KEYS = line
-            break
-    else:
-        KEYS = do_decrypt(licurl=licurl, pssh=pssh)
-        KEYS = keysOnly(KEYS)
-        save_keys(KEYS)
+KEYS = None
+
+if os.path.exists(keys_cache):
+    with open(keys_cache,'r') as file:
+        for line in file:
+            if kid in line:
+                print("Key found in cache")
+                KEYS = line
+                break
+if not KEYS:
+    KEYS = do_decrypt(licurl=licurl, pssh=pssh)
+    KEYS = keysOnly(KEYS)
+    save_keys(KEYS)
 
 print(f"\nKEY : {KEYS}")
 
