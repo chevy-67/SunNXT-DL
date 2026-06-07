@@ -6,6 +6,7 @@ video_enc = './output/temp/vid_enc.mp4'
 audio_enc = './output/temp/aud_enc.m4a'
 audio_dec = './output/temp/aud_dec.m4a'
 video_dec = './output/temp/vid_dec.mp4'
+subtitle = './output/temp/{}.srt'
 cookies_file = "./cookies/cookies.txt"
 mp4decrypt = "./binaries/mp4decrypt"
 yt_dlp = './binaries/yt-dlp_linux'
@@ -24,6 +25,7 @@ def parseCookieFile(cookiefile):
     return cookies
     
 cookies = parseCookieFile(cookies_file)
+INFO_URL = "https://pwaapi.sunnxt.com/content/v3/contentDetail/{}/?fields=generalInfo,subtitles"
 headers = {'User-Agent': 'Mozilla/5.0'}
 lic_header = {
        "Accept": "*/*",
@@ -59,14 +61,14 @@ divider = f"{BOLD}{BLUE}{'═' * width}{RESET}"
 def mpd_to_id(mpd):
     return mpd.split('?')[0].split('/')[-1].split('_')[0]
 
-def get_title(mpd):
-    id = mpd_to_id(mpd)
-    base_url = f"https://pwaapi.sunnxt.com/content/v3/contentDetail/{id}/?fields=generalInfo"
-    resp = requests.get(base_url,headers=headers)
+CONTENT_ID = mpd_to_id(MPD)
+
+def get_title():
+    resp = requests.get(INFO_URL.format(CONTENT_ID),headers=headers)
     title = resp.json()['results'][0]['generalInfo']['title']
     return title
 
-title = get_title(MPD)
+title = get_title()
 print(divider)
 print("\nRipping : "+title+"\n")
 print(divider)  
@@ -88,7 +90,30 @@ if not os.path.exists(video_enc) and not os.path.exists(video_dec):
 else:
     print("\nVideo Already Downloaded")
 
-                    
+def get_subtitle():
+    resp = requests.get(INFO_URL.format(CONTENT_ID),headers=headers)
+    try:
+        subtitles = resp.json()['results'][0]['subtitles']['values']
+        subs = {}
+        for sub in subtitles:
+            subs[sub['language']] = sub['link_sub']+'.srt'
+        return subs
+    except:
+        return None
+
+subs = get_subtitle()
+subtitles = []
+
+if subs:
+    print("\nDownloading subtitle...")
+    print(subs)
+    for lang,link in subs.items():
+        PATH = subtitle.format(lang)
+        subprocess.run([yt_dlp,'--allow-unplayable-formats','-k', link, '--fixup', 'never', '-o', PATH])
+        subtitles.append(PATH)
+else:
+    print("\nNo subtitle found!")
+                 
 def extract_drm_from_mpd(url):
     try:
         req = urllib.request.Request(url, headers=headers)
@@ -120,26 +145,7 @@ pssh, kid = extract_drm_from_mpd(MPD)
 print(f"KID    :  {kid}")
 print(f"PSSH   : {pssh}")
 
-lic_header = {
-       "Accept": "*/*",
-    "Accept-Encoding": "gzip, deflate, br, zstd",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Connection": "keep-alive",
-    "Content-Length": "1719",
-    "Host": "pwaapi.sunnxt.com",
-    "Origin": "https://www.sunnxt.com",
-    "Referer": "https://www.sunnxt.com/",
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "same-site",
-    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
-    "sec-ch-ua": "\"Chromium\";v=\"148\", \"Google Chrome\";v=\"148\", \"Not/A)Brand\";v=\"99\"",
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": "Linux"
-}
-
-content_id = mpd_to_id(MPD)
-licurl = f'https://pwaapi.sunnxt.com/licenseproxy/v3/modularLicense/?content_id={content_id}'
+licurl = f'https://pwaapi.sunnxt.com/licenseproxy/v3/modularLicense/?content_id={CONTENT_ID}'
 
 def do_decrypt(pssh, licurl):
     wvdecrypt = WvDecrypt(pssh)
@@ -189,7 +195,33 @@ print("\nDecrypting audio...")
 subprocess.run([mp4decrypt,'--show-progress','--key',KEYS,audio_enc,audio_dec],capture_output=True,text=True)
 
 print('\nMerging video and audio...')
-subprocess.run([ffmpeg,'-hide_banner','-y','-i',video_dec,'-i',audio_dec,'-c:v','copy','-c:a','copy','-map','0:v','-map','1:a',f'./output/{title}.mkv'])
+cmd = [ffmpeg,'-hide_banner','-y','-i',video_dec,'-i',audio_dec]
+
+if subs:
+    for subtitle in subtitles:
+        cmd.extend(['-i',subtitle])
+cmd.extend(['-map', '0:v', '-map', '1:a'])
+cmd.extend(['-c:v', 'copy', '-c:a', 'copy', '-c:s', 'srt'])
+
+if subs:
+    input_index = 2
+    track_index = 0
+    for subtitle in subtitles:
+        lang = os.path.splitext(os.path.basename(subtitle))[0]
+        cmd.extend(['-map', str(input_index)])
+        cmd.extend([
+            f'-metadata:s:s:{track_index}', f'language={lang}',
+            f'-metadata:s:s:{track_index}', f'title=R4'#f'{lang.upper()}'
+        ])
+        
+        input_index += 1
+        track_index += 1
+
+cmd.append(f'./output/{title}.mkv')
+
+print("Running command:", cmd)
+
+subprocess.run(cmd, check=True)
 
 print("\nClearing temp files")
 os.remove(video_dec)
