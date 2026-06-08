@@ -63,14 +63,15 @@ def mpd_to_id(mpd):
 
 CONTENT_ID = mpd_to_id(MPD)
 
-def get_title():
+def get_metadata():
     resp = requests.get(INFO_URL.format(CONTENT_ID),headers=headers)
     title = resp.json()['results'][0]['generalInfo']['title']
-    return title
+    year = resp.json()['results'][0]['generalInfo']['displayTitle'][-4:]
+    return title,year
 
-title = get_title()
+title,year = get_metadata()
 print(divider)
-print("\nRipping : "+title+"\n")
+print(f"\nRipping : {title} ({year})\n")
 print(divider)  
 subprocess.run([yt_dlp,'--allow-unplayable-formats','-F','-q','--no-warnings',MPD], check=True, text=True)
 print(divider)
@@ -106,7 +107,6 @@ subtitles = []
 
 if subs:
     print("\nDownloading subtitle...")
-    print(subs)
     for lang,link in subs.items():
         PATH = subtitle.format(lang)
         subprocess.run([yt_dlp,'--allow-unplayable-formats','-k', link, '--fixup', 'never', '-o', PATH])
@@ -217,7 +217,7 @@ if subs:
         input_index += 1
         track_index += 1
 
-cmd.append(f'./output/{title}.mkv')
+cmd.append(f'./output/{title} ({year}).mkv')
 
 print("Running command:", cmd)
 
@@ -228,5 +228,7 @@ os.remove(video_dec)
 os.remove(audio_dec)
 os.remove(video_enc)
 os.remove(audio_enc)
+for i in subtitles:
+    os.remove(i)
 
 print("\nAll done!")
